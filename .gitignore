@@ -1,0 +1,6 @@
+# Ignore VS Code directory
+.vscode/
+
+# Ignore build output
+*.o
+showPerlin
