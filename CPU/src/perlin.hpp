@@ -24,4 +24,8 @@ float interpolate(float a0, float a1, float w);
 // Function to generate Perlin noise at given coordinates
 float perlin(float x, float y);
 
+// Function to build the Perlin noise map
+void buildImage(const int windowWidth, const int windowHeight, const int gridSize, const int numOctaves, const unsigned seed, float **image);
+
+
 #endif
