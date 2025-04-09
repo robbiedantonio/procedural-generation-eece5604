@@ -7,7 +7,7 @@ void timeBuildImage(int width, int height, int gridSize, int numOctaves, unsigne
 
     buildImage(width, height, gridSize, numOctaves, seed, image);
 
-    cudaDeviceSynchronize();  // Ensure GPU computation is finished before measuring time
+    // cudaDeviceSynchronize();  // Ensure GPU computation is finished before measuring time
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedSeconds = end - start;

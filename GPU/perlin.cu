@@ -1,6 +1,6 @@
 #include <cmath>
 #include <cuda_runtime.h>
-
+#include "perlin.hpp"
 
 __device__ vector2 randomGradient(int ix, int iy, unsigned seed) {
     unsigned a = ix + seed;
@@ -78,7 +78,9 @@ __global__ void buildImageKernel(float* image, int width, int height, int gridSi
 
 void buildImage(int windowWidth, int windowHeight, int gridSize, int numOctaves, unsigned seed, float** outImage) {
     float* d_image;
-    float* h_image = new float[windowWidth * windowHeight];
+    
+    // Directly allocate memory for outImage
+    *outImage = new float[windowWidth * windowHeight];
 
     cudaMalloc(&d_image, windowWidth * windowHeight * sizeof(float));
 
@@ -86,12 +88,8 @@ void buildImage(int windowWidth, int windowHeight, int gridSize, int numOctaves,
     dim3 gridDim((windowWidth + 15) / 16, (windowHeight + 15) / 16);
 
     buildImageKernel<<<gridDim, blockDim>>>(d_image, windowWidth, windowHeight, gridSize, numOctaves, seed);
-    cudaMemcpy(h_image, d_image, windowWidth * windowHeight * sizeof(float), cudaMemcpyDeviceToHost);
-
-    // Convert 1D to 2D
-    *outImage = new float[windowWidth * windowHeight];
-    memcpy(*outImage, h_image, windowWidth * windowHeight * sizeof(float));
+    cudaMemcpy(*outImage, d_image, windowWidth * windowHeight * sizeof(float), cudaMemcpyDeviceToHost);
 
     cudaFree(d_image);
-    delete[] h_image;
 }
+
