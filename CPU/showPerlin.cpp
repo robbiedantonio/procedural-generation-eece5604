@@ -1,5 +1,8 @@
 #include <iostream>
 #include <chrono>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
 #include "SFML/Graphics.hpp"
 #include "perlin.hpp"
 
@@ -47,6 +50,27 @@ int main() {
             displayableImage.setPixel(sf::Vector2u(x, y), color);
         }
     }
+
+    // Generate filename with timestamp
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm* now_tm = std::localtime(&now_time);
+
+    std::ostringstream filenameStream;
+    filenameStream << "../assets/perlin_"
+                    << std::put_time(now_tm, "%Y-%m-%d_%H-%M-%S")
+                    << ".png";
+
+    std::string filename = filenameStream.str();
+
+    // Save the generated image to a timestamped file
+    if (!displayableImage.saveToFile(filename)) {
+        std::cerr << "Failed to save image to file!" << std::endl;
+        return 1;
+    } else {
+        std::cout << "Image saved as " << filename << std::endl;
+    }
+    
 
     sf::Texture texture;
     if (!texture.loadFromImage(displayableImage)) {
