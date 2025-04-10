@@ -3,17 +3,6 @@
 #include "SFML/Graphics.hpp"
 #include "perlin.hpp"
 
-// Timing wrapper function
-void timeBuildImage(int width, int height, int gridSize, int numOctaves, unsigned seed, float** image) {
-    auto start = std::chrono::high_resolution_clock::now();
-
-    buildImage(width, height, gridSize, numOctaves, seed, image);
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsedSeconds = end - start;
-
-    std::cout << "Terrain generated in " << elapsedSeconds.count() << " seconds." << std::endl;
-}
 
 int main() {
     const int windowWidth = 1920;
@@ -33,7 +22,7 @@ int main() {
     }
 
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    timeBuildImage(windowWidth, windowHeight, GRID_SIZE, NUM_OCTAVES, seed, image);
+    double time = buildPerlinNoise(windowWidth, windowHeight, GRID_SIZE, NUM_OCTAVES, seed, image);
 
     for (int x = 0; x < windowWidth; x++) {
         for (int y = 0; y < windowHeight; y++) {

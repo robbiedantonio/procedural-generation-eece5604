@@ -2,6 +2,18 @@
 #include <math.h>
 #include "perlin.hpp"
 
+// Define a 2D vector structure
+typedef struct {
+    float x, y;
+} vector2;
+
+// Timing function
+double CLOCK() {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC,  &t);
+    return (t.tv_sec * 1000)+(t.tv_nsec*1e-6);
+}
+
 vector2 randomGradient(int ix, int iy, unsigned seed) {
     // Use the seed and grid coordinates to create a deterministic "random" number
     unsigned a = ix + seed;  // Combine grid coordinates with the seed
@@ -44,7 +56,7 @@ float interpolate(float a0, float a1, float w)
 }
 
 // Sample Perlin noise at coordinates x, y
-float perlin(float x, float y, unsigned seed) {
+float pixelPerlin(float x, float y, unsigned seed) {
     
     // Determine grid cell corner coordinates
     int x0 = (int)x; 
@@ -72,7 +84,12 @@ float perlin(float x, float y, unsigned seed) {
     return value;
 }
 
-void buildImage(const int windowWidth, const int windowHeight, const int gridSize, const int numOctaves, unsigned seed, float **image) {
+double buildPerlinNoise(const int windowWidth, const int windowHeight, const int gridSize, const int numOctaves, unsigned seed, float **image) {
+    // timing variables
+    double start, finish;
+
+    start = CLOCK();
+
     for (int x = 0; x < windowWidth; x++) {
         for (int y = 0; y < windowHeight; y++) {
             float val = 0;  // Value of the pixel
@@ -80,7 +97,7 @@ void buildImage(const int windowWidth, const int windowHeight, const int gridSiz
             float amp = 1;  // Amplitude
 
             for (int i = 0; i < numOctaves; i++) {
-                val += perlin(x * freq / gridSize, y * freq / gridSize, seed) * amp;   // Get perlin noise for an octave
+                val += pixelPerlin(x * freq / gridSize, y * freq / gridSize, seed) * amp;   // Get perlin noise for an octave
                 freq *= 2;  // Next octave has double the frequency
                 amp /= 2;   // Next octave has half the amplitude
             }
@@ -94,4 +111,7 @@ void buildImage(const int windowWidth, const int windowHeight, const int gridSiz
             image[x][y] = val;
         }
     }
+
+    finish = CLOCK();
+    return (finish - start);
 }
