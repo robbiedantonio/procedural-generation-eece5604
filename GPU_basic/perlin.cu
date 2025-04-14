@@ -113,14 +113,12 @@ double buildPerlinNoise(int windowWidth, int windowHeight, int gridSize, int num
     // Timing variables
     double start, finish;
     
-    // Initialize host + device memory
-    float* h_image;
-    float* d_image;
-
     // Amt of data to copy back and forth
     int bytes = windowWidth * windowHeight * sizeof(float);
 
-    // Allocate device memory
+    // Initialize and allocate host + device memory
+    float* h_image = (float*)malloc(bytes);
+    float* d_image;
     cudaMalloc(&d_image, bytes);
 
     // device kernel launch config
