@@ -1,5 +1,8 @@
 #include "perlin.hpp"
 
+#define BLOCK_SIZE_X 16
+#define BLOCK_SIZE_Y 16
+
 // CUDA-compatible 2D vector struct
 struct vector2 {
     float x, y;
@@ -69,30 +72,57 @@ __device__ float pixelPerlin(float x, float y, unsigned seed) {
 }
 
 // CUDA kernel - each thread computes the Perlin noise value for a single pixel
-__global__ void perlinKernel(float* d_image, int windowWidth, int windowHeight, int gridSize, int numOctaves, unsigned seed) {
+__global__ void perlinKernel(float* d_output, int windowWidth, int windowHeight, 
+    int perlinGridSize, int numOctaves, unsigned baseSeed) {
     // Get the pixel coordinates for this thread
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Check if the pixel is within bounds
-    if (x >= windowWidth || y >= windowHeight) return;
+    bool pixelInBounds = (x < windowWidth && y < windowHeight);
 
-    // Initialize the noise, amplitude, and frequency
-    float noise = 0.0f;
-    float freq = 1.0f;
-    float amp = 1.0f;
+    // Shared memory to hold octave results for this block
+    __shared__ float octaveResults[BLOCK_SIZE_Y][BLOCK_SIZE_X][12]; // Assuming 12 octaves max
 
-    // Loop through the octaves to accumulate the noise value
-    for (int i = 0; i < numOctaves; i++) {
-        noise += amp * pixelPerlin(x * freq / gridSize, y * freq / gridSize, seed);
-        freq *= 2.0f; // Increase frequency for the next octave
-        amp /= 2.0f; // Decrease amplitude for the next octave
+    // Initialize shared memory
+    if (pixelInBounds) {
+        // Each thread in the block will compute a specific octave for its pixel
+        // We'll do this using a loop since we typically have fewer threads than octaves
+        for (int octave = 0; octave < numOctaves; octave += blockDim.z) {
+            int currentOctave = octave + threadIdx.z;
+
+            if (currentOctave < numOctaves) {
+                // Calculate frequency and amplitude for this octave
+                float freq = powf(2.0f, currentOctave);
+                float amp = powf(0.5f, currentOctave);
+
+                // Compute noise for this octave
+                float noise = pixelPerlin(x * freq / perlinGridSize, 
+                    y * freq / perlinGridSize,
+                    baseSeed + currentOctave);
+
+                // Normalize and store in shared memory
+                noise = fminf(1.0f, fmaxf(-1.0f, noise));
+                octaveResults[threadIdx.y][threadIdx.x][currentOctave] = amp * noise;
+            } else {
+                octaveResults[threadIdx.y][threadIdx.x][currentOctave] = 0.0f;
+            }
+        }
     }
 
-    // Normalize the noise value to the range [0, 1]
-    noise = fminf(1.0f, fmaxf(-1.0f, noise)); // Clamp the value to [-1, 1]
+    // Ensure all octaves are computed before summing
+    __syncthreads();
 
-    d_image[y * windowWidth + x] = noise; // Write the noise to the global array
+    // Sum up the octaves and write to global memory
+    if (pixelInBounds) {
+        float total = 0.0f;
+        for (int i = 0; i < numOctaves; i++) {
+            total += octaveResults[threadIdx.y][threadIdx.x][i];
+        }
+
+        // Write final result to global memory
+        d_output[y * windowWidth + x] = total;
+    }
 }
 
 // Builds the perlin noise map 
@@ -109,9 +139,10 @@ double buildPerlinNoise(int windowWidth, int windowHeight, int gridSize, int num
     cudaMalloc(&d_image, bytes);
 
     // device kernel launch config
-    dim3 blockDim(16, 16);
-    dim3 gridDim((windowWidth + 15) / 16, (windowHeight + 15) / 16);
-
+    dim3 blockDim(BLOCK_SIZE_X, BLOCK_SIZE_Y, 12); // 12 octaves max
+    dim3 gridDim((windowWidth + blockDim.x - 1) / blockDim.x,
+    (windowHeight + blockDim.y - 1) / blockDim.y,
+    1);
     // Launch device kernel
     start = CLOCK();
     perlinKernel<<<gridDim, blockDim>>>(d_image, windowWidth, windowHeight, gridSize, numOctaves, seed);
