@@ -6,8 +6,8 @@ Final project for NEU EECE 5604: High Performance Computing
 Unoptimized, single threaded CPU Runtime: 5183.5440 ms
 P100, one kernel per octave streamed, accumulator kernel: 54.76 ms
 P100, one kernel computes and sums all octaves: 34.48 ms
-P100, three-dimensional kernel: 56.99 ms 
-P100, three-dimension kernel + texture memory: 39.99 ms
+P100, three-dimensional kernel: 41.57 ms 
+P100, three-dimension kernel + texture memory: 37.54 ms
 P100 GPU Runtime with Texture Memory: 4.62 ms
 H100 GPU Runtime with texture memory: 2.87 ms
 ```

@@ -114,13 +114,12 @@ __global__ void perlinKernel(float* d_output, int windowWidth, int windowHeight,
     __syncthreads();
 
     // Sum up the octaves and write to global memory
-    if (pixelInBounds) {
+    if (pixelInBounds && threadIdx.z == 0) {
         float total = 0.0f;
         for (int i = 0; i < numOctaves; i++) {
             total += octaveResults[threadIdx.y][threadIdx.x][i];
         }
-
-        // Write final result to global memory
+    
         d_output[y * windowWidth + x] = total;
     }
 }
